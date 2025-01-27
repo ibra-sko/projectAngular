@@ -1,36 +1,56 @@
-import {Component, inject} from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ProductCardComponent } from './product-card/product-card.component';
 import { Product } from './product';
-import {SortByDate} from "./SortByDatePipe";
-import {FormsModule} from "@angular/forms";
-import {SortByPipe} from "./sort-by-name.pipe";
-import {ProductService} from "./product.service";
+import { FormsModule } from '@angular/forms';
+import { SortByPipe } from './sort-by.pipe';
+import { ProductService } from './product.service';
+import { SearchBarComponent } from './search-bar/search-bar.component';
+import { NgForOf } from '@angular/common';
+import { HeaderComponent } from './header/header.component';
+import { FooterComponent } from './footer/footer.component';
 
 @Component({
-  selector: 'app-root',
-    imports: [RouterOutlet, ProductCardComponent, SortByDate, FormsModule, SortByPipe],
-  template: `
-    <h1>Welcome to {{title}}!</h1>
-    <h2>{{countFav}} favorites</h2>
-    <select [(ngModel)]="sortCriteria">
-        <option value="dateAsc">Date Croissante</option>
-        <option value="dateDesc">Date Descroissante</option>
-        <option value="nameAsc">Nom Croissant</option>
-        <option value="nameDesc">Nom Descroissant</option>
-    </select>
-    @for (p of (products | sortBy:sortCriteria:sortAsc); track p.id) {
-    <app-product-card 
-        [product]=p
-        (addItemEvent)="addItem($event)"
-    />
-    }
-      <router-outlet />
-  `,
-  styles: [],
+    selector: 'app-root',
+    standalone: true,
+    imports: [RouterOutlet, ProductCardComponent, FormsModule, SortByPipe, SearchBarComponent, NgForOf, HeaderComponent, FooterComponent],
+    template: `
+        <app-header></app-header>
+        <main>
+            <h2>{{ countFav }} favorites</h2>
+            <app-search-bar (searchEvent)="filterProducts($event)"></app-search-bar>
+            <select [(ngModel)]="sortCriteria">
+                <option value="dateAsc">Date Croissante</option>
+                <option value="dateDesc">Date Descroissante</option>
+                <option value="nameAsc">Nom Croissant</option>
+                <option value="nameDesc">Nom Descroissant</option>
+            </select>
+            <div class="products">
+                <ng-container *ngFor="let p of (products | sortBy:sortCriteria:sortAsc); trackBy: trackById">
+                    <app-product-card
+                            [product]="p"
+                            (addItemEvent)="addItem($event)"
+                    ></app-product-card>
+                </ng-container>
+            </div>
+        </main>
+        <app-footer></app-footer>
+        <router-outlet></router-outlet>
+    `,
+    styles: [`
+        .products {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+        main {
+            padding-bottom: 60px; /* Space for the fixed footer */
+        }
+    `]
 })
 export class AppComponent {
-  title = 'ng-projet-angular';
+    title = 'ng-projet-angular';
     countFav = 0;
     productService = inject(ProductService);
     product = this.productService.getProducts();
@@ -52,10 +72,19 @@ export class AppComponent {
         {id: 12, name: 'Hagrid', isFavorite: false, createdDate: new Date(1928, 11, 6)},
         {id: 13, name: 'Sirius Black', isFavorite: false, createdDate: new Date(1960, 10, 11)},
         {id: 14, name: 'Remus Lupin', isFavorite: false, createdDate: new Date(1960, 2, 10)}
-    ]
+    ];
 
-    addItem(item:number) {
+    addItem(item: number) {
         this.countFav += item;
     }
-}
 
+    filterProducts(query: string) {
+        this.products = this.productService.getProducts().filter(product =>
+            product.name.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+
+    trackById(index: number, item: Product): number {
+        return item.id;
+    }
+}
